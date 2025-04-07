@@ -12,7 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Configure database
-var azureConnectionString = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
+// .GetValue gets the string from Azure environment variables
+var azureConnectionString = builder.Configuration.GetValue<string>("AZURE_SQL_CONNECTIONSTRING");
 var localConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (azureConnectionString != null)
