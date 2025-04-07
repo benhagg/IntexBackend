@@ -1,5 +1,6 @@
 using IntexBackend.Data;
 using IntexBackend.Models;
+using IntexBackend.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,13 @@ namespace IntexBackend.Controllers
                 // Get user information separately
                 var user = await _context.MovieUsers.FindAsync(r.UserId);
                 
+                // HTML encode the review text to prevent XSS attacks when displayed in the browser
+                string encodedReview = null;
+                if (!string.IsNullOrEmpty(r.Review))
+                {
+                    encodedReview = SecurityUtils.HtmlEncode(r.Review);
+                }
+
                 // Create a DTO with all the necessary information
                 ratingDtos.Add(new
                 {
@@ -48,9 +56,9 @@ namespace IntexBackend.Controllers
                     r.UserId,
                     r.ShowId,
                     r.Rating,
-                    r.Review,
+                    Review = encodedReview,
                     r.CreatedAt,
-                    UserName = user?.Name ?? "Anonymous"
+                    UserName = SecurityUtils.HtmlEncode(user?.Name ?? "Anonymous")
                 });
             }
 
@@ -69,7 +77,18 @@ namespace IntexBackend.Controllers
                 .Where(r => r.UserId == userId)
                 .ToListAsync();
 
-            return Ok(ratings);
+            // Create DTOs with encoded review text
+            var ratingDtos = ratings.Select(r => new
+            {
+                r.RatingId,
+                r.UserId,
+                r.ShowId,
+                r.Rating,
+                Review = !string.IsNullOrEmpty(r.Review) ? SecurityUtils.HtmlEncode(r.Review) : null,
+                r.CreatedAt
+            }).ToList();
+
+            return Ok(ratingDtos);
         }
 
         // POST: api/MovieRating
@@ -101,13 +120,22 @@ namespace IntexBackend.Controllers
                 userId = userIdString.GetHashCode();
             }
 
+            // Sanitize the review text to prevent XSS attacks
+            string sanitizedReview = null;
+            if (!string.IsNullOrEmpty(ratingDto.Review))
+            {
+                sanitizedReview = SecurityUtils.SanitizeInput(ratingDto.Review);
+                Console.WriteLine($"Original review: {ratingDto.Review}");
+                Console.WriteLine($"Sanitized review: {sanitizedReview}");
+            }
+
             // Always create a new rating (allowing multiple reviews per user per movie)
             var newRating = new MovieRating
             {
                 UserId = userId,
                 ShowId = ratingDto.ShowId,
                 Rating = ratingDto.Rating,
-                Review = ratingDto.Review,
+                Review = sanitizedReview,
                 CreatedAt = DateTime.UtcNow
             };
             
