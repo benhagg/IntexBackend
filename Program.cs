@@ -8,12 +8,14 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 // Add services to the container.
 builder.Services.AddControllers();
 
 // Configure database
 // .GetValue gets the string from Azure environment variables
-var azureConnectionString = builder.Configuration.GetValue<string>("AZURE_SQL_CONNECTIONSTRING");
+// var azureConnectionString = builder.Configuration.GetValue<string>("AZURE_SQL_CONNECTIONSTRING");
+var azureConnectionString = "Server=tcp:intexbackend-server.database.windows.net,1433;Initial Catalog=intexbackend-database;Persist Security Info=False;User ID=intexbackend-server-admin;Password=IS413intexlogiF12sql;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
 var localConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (azureConnectionString != null)
