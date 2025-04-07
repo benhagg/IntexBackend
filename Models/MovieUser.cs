@@ -8,6 +8,7 @@ namespace IntexBackend.Models
     {
         [Key]
         [Column("user_id")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int UserId { get; set; }
 
         [Column("name")]

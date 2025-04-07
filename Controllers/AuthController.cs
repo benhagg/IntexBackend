@@ -105,8 +105,16 @@ namespace IntexBackend.Controllers
             }
             catch (Exception ex)
             {
-                // Log the error but don't fail the registration
+                // Log the error and delete the identity user to ensure consistency
                 Console.WriteLine($"Error creating MovieUser record: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                
+                // Delete the identity user to maintain consistency
+                await _userManager.DeleteAsync(user);
+                
+                // Return a more specific error message
+                ModelState.AddModelError(string.Empty, "Failed to create user profile. Please try again.");
+                return BadRequest(ModelState);
             }
 
             return Ok(new { message = "User registered successfully" });
