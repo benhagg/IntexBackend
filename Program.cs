@@ -12,15 +12,27 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Configure database
-var connectionString = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING") ??
-    throw new InvalidOperationException("Azure SQL connection string is missing");
+var azureConnectionString = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
+var localConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Update to use SQL Server
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+if (azureConnectionString != null)
+{
+    // Use Azure SQL if available
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(azureConnectionString));
+    Console.WriteLine("Using Azure SQL Database");
+}
+else if (localConnectionString != null)
+{
+    // Fall back to SQLite if Azure SQL is not available
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite(localConnectionString));
+    Console.WriteLine("Using local SQLite Database");
+}
+else
+{
+    throw new InvalidOperationException("No database connection string is available");
+}
 
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => {
