@@ -12,8 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Configure database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? 
-    "Data Source=Movies.db";
+var connectionString = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING") ??
+    throw new InvalidOperationException("Azure SQL connection string is missing");
+
+// Update to use SQL Server
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
