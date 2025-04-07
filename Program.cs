@@ -14,8 +14,9 @@ builder.Services.AddControllers();
 
 // Configure database
 // .GetValue gets the string from Azure environment variables
-// var azureConnectionString = builder.Configuration.GetValue<string>("AZURE_SQL_CONNECTIONSTRING");
-var azureConnectionString = "Server=tcp:intexbackend-server.database.windows.net,1433;Initial Catalog=intexbackend-database;Persist Security Info=False;User ID=intexbackend-server-admin;Password=IS413intexlogiF12sql;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+// Get connection string from Azure environment variables
+var azureConnectionString = Environment.GetEnvironmentVariable("AZURE_SQL_CONNECTIONSTRING");
+// for local development, use the connection string from appsettings.json
 var localConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (azureConnectionString != null)
