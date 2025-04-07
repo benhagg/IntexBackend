@@ -20,9 +20,7 @@ namespace IntexBackend.Data
         {
             base.OnModelCreating(modelBuilder);
             
-            // Configure MovieRating primary key
-            modelBuilder.Entity<MovieRating>()
-                .HasKey(mr => new { mr.UserId, mr.ShowId });
+            // MovieRating now uses RatingId as primary key, so we don't need to configure a composite key
         }
     }
 }

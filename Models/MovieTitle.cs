@@ -37,6 +37,9 @@ namespace IntexBackend.Models
         [Column("description")]
         public string? Description { get; set; }
 
+        [Column("imageUrl")]
+        public string? ImageUrl { get; set; }
+
         // Genre columns
         [Column("Action")]
         public int Action { get; set; }

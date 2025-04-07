@@ -5,9 +5,12 @@ using Microsoft.EntityFrameworkCore;
 namespace IntexBackend.Models
 {
     [Table("movies_ratings")]
-    [PrimaryKey(nameof(UserId), nameof(ShowId))]
     public class MovieRating
     {
+        [Key]
+        [Column("rating_id")]
+        public int RatingId { get; set; }
+
         [Column("user_id")]
         public int UserId { get; set; }
 
@@ -16,6 +19,12 @@ namespace IntexBackend.Models
 
         [Column("rating")]
         public int Rating { get; set; }
+
+        [Column("review")]
+        public string? Review { get; set; }
+
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation property for movie title
         [ForeignKey("ShowId")]
