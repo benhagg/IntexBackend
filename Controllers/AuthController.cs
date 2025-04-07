@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using IntexBackend.Data;
+using IntexBackend.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -16,17 +18,20 @@ namespace IntexBackend.Controllers
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
+        private readonly ApplicationDbContext _context;
 
         public AuthController(
             UserManager<IdentityUser> userManager,
             SignInManager<IdentityUser> signInManager,
             RoleManager<IdentityRole> roleManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _context = context;
         }
 
         [HttpPost("register")]
@@ -57,6 +62,52 @@ namespace IntexBackend.Controllers
 
             // Add user to the User role
             await _userManager.AddToRoleAsync(user, "User");
+
+            // Create a MovieUser record with the additional information
+            try
+            {
+                // Parse age and zip to integers, defaulting to 0 if parsing fails
+                int age = 0;
+                if (!string.IsNullOrEmpty(model.Age))
+                {
+                    int.TryParse(model.Age, out age);
+                }
+
+                int zip = 0;
+                if (!string.IsNullOrEmpty(model.Zip))
+                {
+                    int.TryParse(model.Zip, out zip);
+                }
+
+                var movieUser = new MovieUser
+                {
+                    Name = model.FullName,
+                    Phone = model.Phone,
+                    Email = model.Email,
+                    Age = age,
+                    Gender = model.Gender,
+                    City = model.City,
+                    State = model.State,
+                    Zip = zip,
+                    // Set streaming service flags
+                    Netflix = model.Services?.Contains("Netflix") == true ? 1 : 0,
+                    AmazonPrime = model.Services?.Contains("Amazon Prime") == true ? 1 : 0,
+                    DisneyPlus = model.Services?.Contains("Disney+") == true ? 1 : 0,
+                    ParamountPlus = model.Services?.Contains("Paramount+") == true ? 1 : 0,
+                    Max = model.Services?.Contains("Max") == true ? 1 : 0,
+                    Hulu = model.Services?.Contains("Hulu") == true ? 1 : 0,
+                    AppleTVPlus = model.Services?.Contains("Apple TV+") == true ? 1 : 0,
+                    Peacock = model.Services?.Contains("Peacock") == true ? 1 : 0
+                };
+
+                _context.MovieUsers.Add(movieUser);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the registration
+                Console.WriteLine($"Error creating MovieUser record: {ex.Message}");
+            }
 
             return Ok(new { message = "User registered successfully" });
         }
@@ -156,6 +207,17 @@ namespace IntexBackend.Controllers
         [Required]
         [Compare("Password")]
         public string ConfirmPassword { get; set; }
+        
+        // Additional user information
+        public string? FullName { get; set; }
+        public string? Phone { get; set; }
+        public string? Username { get; set; }
+        public string? Age { get; set; }
+        public string? Gender { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? Zip { get; set; }
+        public List<string>? Services { get; set; }
     }
 
     public class LoginModel
