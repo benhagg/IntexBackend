@@ -4,6 +4,7 @@ using IntexBackend.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 namespace IntexBackend.Controllers
 {
@@ -233,24 +234,13 @@ namespace IntexBackend.Controllers
 
     public class MovieRatingDto
     {
-        public string ShowId { get; set; }
+        [JsonPropertyName("showId")]
+        public string? ShowId { get; set; }
+        
+        [JsonPropertyName("rating")]
         public int Rating { get; set; }
+        
+        [JsonPropertyName("review")]
         public string? Review { get; set; }
-
-        // Add these properties to support lowercase naming from frontend
-        public string showId { 
-            get => ShowId; 
-            set => ShowId = value; 
-        }
-        
-        public int rating { 
-            get => Rating; 
-            set => Rating = value; 
-        }
-        
-        public string? review { 
-            get => Review; 
-            set => Review = value; 
-        }
     }
 }
