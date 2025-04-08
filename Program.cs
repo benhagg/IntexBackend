@@ -169,6 +169,7 @@ using (var scope = app.Services.CreateScope())
     // Create admin user if it doesn't exist
     var adminEmail = "admin@movies.com";
     var adminUser = await userManager.FindByEmailAsync(adminEmail);
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     
     if (adminUser == null)
     {
@@ -184,6 +185,43 @@ using (var scope = app.Services.CreateScope())
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, "Admin");
+            
+            // Create MovieUser record for admin
+            var adminMovieUser = new IntexBackend.Models.MovieUser
+            {
+                Name = "Admin User",
+                Email = adminEmail,
+                Age = 30,
+                Gender = "Other",
+                City = "Movie City",
+                State = "CA",
+                Zip = 12345
+            };
+            
+            dbContext.MovieUsers.Add(adminMovieUser);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+    else
+    {
+        // Check if MovieUser record exists for admin
+        var adminMovieUser = await dbContext.MovieUsers.FirstOrDefaultAsync(u => u.Email == adminEmail);
+        if (adminMovieUser == null)
+        {
+            // Create MovieUser record for existing admin
+            adminMovieUser = new IntexBackend.Models.MovieUser
+            {
+                Name = "Admin User",
+                Email = adminEmail,
+                Age = 30,
+                Gender = "Other",
+                City = "Movie City",
+                State = "CA",
+                Zip = 12345
+            };
+            
+            dbContext.MovieUsers.Add(adminMovieUser);
+            await dbContext.SaveChangesAsync();
         }
     }
     
@@ -205,6 +243,43 @@ using (var scope = app.Services.CreateScope())
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(regularUser, "User");
+            
+            // Create MovieUser record for regular user
+            var regularMovieUser = new IntexBackend.Models.MovieUser
+            {
+                Name = "Regular User",
+                Email = userEmail,
+                Age = 25,
+                Gender = "Other",
+                City = "User City",
+                State = "NY",
+                Zip = 54321
+            };
+            
+            dbContext.MovieUsers.Add(regularMovieUser);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+    else
+    {
+        // Check if MovieUser record exists for regular user
+        var regularMovieUser = await dbContext.MovieUsers.FirstOrDefaultAsync(u => u.Email == userEmail);
+        if (regularMovieUser == null)
+        {
+            // Create MovieUser record for existing regular user
+            regularMovieUser = new IntexBackend.Models.MovieUser
+            {
+                Name = "Regular User",
+                Email = userEmail,
+                Age = 25,
+                Gender = "Other",
+                City = "User City",
+                State = "NY",
+                Zip = 54321
+            };
+            
+            dbContext.MovieUsers.Add(regularMovieUser);
+            await dbContext.SaveChangesAsync();
         }
     }
 }
