@@ -17,7 +17,7 @@ namespace IntexBackend.Controllers
         {
             _context = context;
         }
-
+// GET: api/MovieTitle
 [HttpGet]
 public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
     [FromQuery] string? genre = null,
@@ -95,6 +95,10 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
         ImageUrl = m.ImageUrl,
         ReleaseYear = m.ReleaseYear,
         Director = m.Director,
+        Cast = m.Cast,
+        Type = m.Type,
+        Country = m.Country,
+        Duration = m.Duration,
         Genre =
             m.Action == 1 ? "Action" :
             m.Adventure == 1 ? "Adventure" :
