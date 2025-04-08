@@ -41,11 +41,7 @@ else
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => {
     // Password settings as per requirements
-    options.Password.RequiredLength = 10;
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 15;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -132,7 +128,7 @@ app.Use(async (context, next) => {
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data:; " +
         "font-src 'self'; " +
-        "connect-src 'self' http://localhost:5173 http://localhost:5174 http://localhost:5175"
+        "connect-src 'self' http://:5173 http://localhost:5174 http://localhost:5175"
     );
     
     // Add HSTS header
