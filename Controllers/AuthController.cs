@@ -6,6 +6,7 @@ using IntexBackend.Data;
 using IntexBackend.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace IntexBackend.Controllers
@@ -165,6 +166,33 @@ namespace IntexBackend.Controllers
         public IActionResult PingAuth()
         {
             return Ok(new { message = "Auth service is running (no auth required)" });
+        }
+
+        [HttpGet("user-info")]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> GetUserInfo()
+        {
+            // Get the user's email from the claims
+            var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            // Find the MovieUser by email
+            var movieUser = await _context.MovieUsers.FirstOrDefaultAsync(u => u.Email == email);
+            
+            if (movieUser == null)
+            {
+                return NotFound(new { message = "User profile not found" });
+            }
+
+            return Ok(new
+            {
+                name = movieUser.Name,
+                email = movieUser.Email
+            });
         }
 
         private async Task<string> GenerateJwtToken(IdentityUser user)
