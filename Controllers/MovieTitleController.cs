@@ -32,7 +32,7 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
         query = query.Where(m => m.Title.ToLower().Contains(search.ToLower()));
     }
 
-    // Genre filter mapping
+    // Genre filter mapping - Ensure exact property name matches
     var genreMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         { "Action", "Action" },
@@ -68,16 +68,47 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
         { "Thriller", "Thrillers" }
     };
 
-    if (!string.IsNullOrEmpty(genre) && genreMap.TryGetValue(genre, out var dbColumn))
+    if (!string.IsNullOrEmpty(genre))
     {
-        // Use reflection to dynamically access the property based on the column name
-        var parameter = Expression.Parameter(typeof(MovieTitle), "m");
-        var property = Expression.Property(parameter, dbColumn);
-        var constant = Expression.Constant(1);
-        var equality = Expression.Equal(property, constant);
-        var lambda = Expression.Lambda<Func<MovieTitle, bool>>(equality, parameter);
-        
-        query = query.Where(lambda);
+        if (genreMap.TryGetValue(genre, out var dbColumn))
+        {
+            // Use direct property access for common genres to avoid reflection issues
+            if (genre.Equals("Action", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(m => m.Action == 1);
+            }
+            else if (genre.Equals("Adventure", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(m => m.Adventure == 1);
+            }
+            else if (genre.Equals("Comedy", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(m => m.Comedies == 1);
+            }
+            else if (genre.Equals("Drama", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(m => m.Dramas == 1);
+            }
+            else if (genre.Equals("Horror", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(m => m.HorrorMovies == 1);
+            }
+            else if (genre.Equals("Thriller", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(m => m.Thrillers == 1);
+            }
+            else
+            {
+                // Use reflection for other genres
+                var parameter = Expression.Parameter(typeof(MovieTitle), "m");
+                var property = Expression.Property(parameter, dbColumn);
+                var constant = Expression.Constant(1);
+                var equality = Expression.Equal(property, constant);
+                var lambda = Expression.Lambda<Func<MovieTitle, bool>>(equality, parameter);
+                
+                query = query.Where(lambda);
+            }
+        }
     }
 
     var totalCount = await query.CountAsync();
@@ -88,7 +119,7 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
         .Take(pageSize)
         .ToListAsync();
 
-    // Now map into the DTO and determine genre
+    // Now map into the DTO and determine genre based on the filter that was applied
     var movieDtos = movies.Select(m => new MovieTitleDto
     {
         ShowId = m.ShowId,
@@ -101,39 +132,13 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
         Type = m.Type,
         Country = m.Country,
         Duration = m.Duration,
-        Genre =
-            m.Action == 1 ? "Action" :
-            m.Adventure == 1 ? "Adventure" :
-            m.AnimeSeriesInternationalTVShows == 1 ? "Anime Series International TV Shows" :
-            m.BritishTVShowsDocuseriesInternationalTVShows == 1 ? "British TV Shows Docuseries International TV Shows" :
-            m.Children == 1 ? "Children" :
-            m.Comedies == 1 ? "Comedy" :
-            m.ComediesDramasInternationalMovies == 1 ? "Comedy Dramas International Movies" :
-            m.ComediesRomanticMovies == 1 ? "Comedy Romantic Movies" :
-            m.CrimeTVShowsDocuseries == 1 ? "Crime TV Shows Docuseries" :
-            m.Documentaries == 1 ? "Documentaries" :
-            m.DocumentariesInternationalMovies == 1 ? "Documentaries International Movies" :
-            m.Docuseries == 1 ? "Docuseries" :
-            m.Dramas == 1 ? "Drama" :
-            m.DramasInternationalMovies == 1 ? "Drama International Movies" :
-            m.DramasRomanticMovies == 1 ? "Drama Romantic Movies" :
-            m.FamilyMovies == 1 ? "Family Movies" :
-            m.Fantasy == 1 ? "Fantasy" :
-            m.HorrorMovies == 1 ? "Horror" :
-            m.InternationalMoviesThrillers == 1 ? "International Movies Thrillers" :
-            m.InternationalTVShowsRomanticTVShowsTVDramas == 1 ? "International TV Shows Romantic TV Shows TV Dramas" :
-            m.KidsTV == 1 ? "Kids' TV" :
-            m.LanguageTVShows == 1 ? "Language TV Shows" :
-            m.Musicals == 1 ? "Musicals" :
-            m.NatureTV == 1 ? "Nature TV" :
-            m.RealityTV == 1 ? "Reality TV" :
-            m.Spirituality == 1 ? "Spirituality" :
-            m.TVAction == 1 ? "TV Action" :
-            m.TVComedies == 1 ? "TV Comedies" :
-            m.TVDramas == 1 ? "TV Dramas" :
-            m.TalkShowsTVComedies == 1 ? "Talk Shows TV Comedies" :
-            m.Thrillers == 1 ? "Thriller" :
-            "Other"
+        // If a genre filter was applied, use that genre for display
+        Genre = !string.IsNullOrEmpty(genre) ? 
+            // Since we've already filtered the movies by the selected genre,
+            // we know this movie has that genre, so just display the selected genre
+            genre :
+            // If no genre filter was applied, use the default genre determination
+            GetPrimaryGenre(m)
     }).ToList();
 
     return Ok(new
@@ -146,24 +151,148 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
     });
 }
 
+// Helper method to determine the primary genre of a movie
+private string GetPrimaryGenre(MovieTitle m)
+{
+    return m.Action == 1 ? "Action" :
+        m.Adventure == 1 ? "Adventure" :
+        m.AnimeSeriesInternationalTVShows == 1 ? "Anime Series International TV Shows" :
+        m.BritishTVShowsDocuseriesInternationalTVShows == 1 ? "British TV Shows Docuseries International TV Shows" :
+        m.Children == 1 ? "Children" :
+        m.Comedies == 1 ? "Comedy" :
+        m.ComediesDramasInternationalMovies == 1 ? "Comedy Dramas International Movies" :
+        m.ComediesRomanticMovies == 1 ? "Comedy Romantic Movies" :
+        m.CrimeTVShowsDocuseries == 1 ? "Crime TV Shows Docuseries" :
+        m.Documentaries == 1 ? "Documentaries" :
+        m.DocumentariesInternationalMovies == 1 ? "Documentaries International Movies" :
+        m.Docuseries == 1 ? "Docuseries" :
+        m.Dramas == 1 ? "Drama" :
+        m.DramasInternationalMovies == 1 ? "Drama International Movies" :
+        m.DramasRomanticMovies == 1 ? "Drama Romantic Movies" :
+        m.FamilyMovies == 1 ? "Family Movies" :
+        m.Fantasy == 1 ? "Fantasy" :
+        m.HorrorMovies == 1 ? "Horror" :
+        m.InternationalMoviesThrillers == 1 ? "International Movies Thrillers" :
+        m.InternationalTVShowsRomanticTVShowsTVDramas == 1 ? "International TV Shows Romantic TV Shows TV Dramas" :
+        m.KidsTV == 1 ? "Kids' TV" :
+        m.LanguageTVShows == 1 ? "Language TV Shows" :
+        m.Musicals == 1 ? "Musicals" :
+        m.NatureTV == 1 ? "Nature TV" :
+        m.RealityTV == 1 ? "Reality TV" :
+        m.Spirituality == 1 ? "Spirituality" :
+        m.TVAction == 1 ? "TV Action" :
+        m.TVComedies == 1 ? "TV Comedies" :
+        m.TVDramas == 1 ? "TV Dramas" :
+        m.TalkShowsTVComedies == 1 ? "Talk Shows TV Comedies" :
+        m.Thrillers == 1 ? "Thriller" :
+        "Other";
+}
+
 
         // GET: api/MovieTitle/genres
         [HttpGet("genres")]
         public async Task<ActionResult<IEnumerable<string>>> GetGenres()
         {
-            // Return a list of available genres
-            // This is a simplified approach - you may need to adjust based on your specific needs
-            var genres = new List<string>
-            {
-                "Action",
-                "Adventure",
-                "Comedy",
-                "Drama",
-                "Horror",
-                "Thriller"
-                // Add more genres as needed
-            };
+            // Query the database to get all genres that have at least one movie
+            var genres = new List<string>();
+            
+            // Check each genre column and add it to the list if there's at least one movie with that genre
+            if (await _context.MovieTitles.AnyAsync(m => m.Action == 1))
+                genres.Add("Action");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Adventure == 1))
+                genres.Add("Adventure");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.AnimeSeriesInternationalTVShows == 1))
+                genres.Add("Anime Series International TV Shows");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.BritishTVShowsDocuseriesInternationalTVShows == 1))
+                genres.Add("British TV Shows Docuseries International TV Shows");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Children == 1))
+                genres.Add("Children");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Comedies == 1))
+                genres.Add("Comedy");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.ComediesDramasInternationalMovies == 1))
+                genres.Add("Comedy Dramas International Movies");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.ComediesRomanticMovies == 1))
+                genres.Add("Comedy Romantic Movies");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.CrimeTVShowsDocuseries == 1))
+                genres.Add("Crime TV Shows Docuseries");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Documentaries == 1))
+                genres.Add("Documentaries");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.DocumentariesInternationalMovies == 1))
+                genres.Add("Documentaries International Movies");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Docuseries == 1))
+                genres.Add("Docuseries");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Dramas == 1))
+                genres.Add("Drama");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.DramasInternationalMovies == 1))
+                genres.Add("Drama International Movies");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.DramasRomanticMovies == 1))
+                genres.Add("Drama Romantic Movies");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.FamilyMovies == 1))
+                genres.Add("Family Movies");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Fantasy == 1))
+                genres.Add("Fantasy");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.HorrorMovies == 1))
+                genres.Add("Horror");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.InternationalMoviesThrillers == 1))
+                genres.Add("International Movies Thrillers");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.InternationalTVShowsRomanticTVShowsTVDramas == 1))
+                genres.Add("International TV Shows Romantic TV Shows TV Dramas");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.KidsTV == 1))
+                genres.Add("Kids' TV");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.LanguageTVShows == 1))
+                genres.Add("Language TV Shows");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Musicals == 1))
+                genres.Add("Musicals");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.NatureTV == 1))
+                genres.Add("Nature TV");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.RealityTV == 1))
+                genres.Add("Reality TV");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Spirituality == 1))
+                genres.Add("Spirituality");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.TVAction == 1))
+                genres.Add("TV Action");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.TVComedies == 1))
+                genres.Add("TV Comedies");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.TVDramas == 1))
+                genres.Add("TV Dramas");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.TalkShowsTVComedies == 1))
+                genres.Add("Talk Shows TV Comedies");
+                
+            if (await _context.MovieTitles.AnyAsync(m => m.Thrillers == 1))
+                genres.Add("Thriller");
 
+            // Sort the genres alphabetically
+            genres.Sort();
+            
             return Ok(genres);
         }
 
