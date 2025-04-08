@@ -17,7 +17,7 @@ namespace IntexBackend.Controllers
         {
             _context = context;
         }
-
+// GET: api/MovieTitle
 [HttpGet]
 public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
     [FromQuery] string? genre = null,
@@ -70,12 +70,14 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
 
     if (!string.IsNullOrEmpty(genre) && genreMap.TryGetValue(genre, out var dbColumn))
     {
-        query = query.Where(BuildGenreExpression(dbColumn));
-
-        Expression<Func<MovieTitle, bool>> BuildGenreExpression(string value)
-        {
-            throw new NotImplementedException();
-        }
+        // Use reflection to dynamically access the property based on the column name
+        var parameter = Expression.Parameter(typeof(MovieTitle), "m");
+        var property = Expression.Property(parameter, dbColumn);
+        var constant = Expression.Constant(1);
+        var equality = Expression.Equal(property, constant);
+        var lambda = Expression.Lambda<Func<MovieTitle, bool>>(equality, parameter);
+        
+        query = query.Where(lambda);
     }
 
     var totalCount = await query.CountAsync();
@@ -95,6 +97,10 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
         ImageUrl = m.ImageUrl,
         ReleaseYear = m.ReleaseYear,
         Director = m.Director,
+        Cast = m.Cast,
+        Type = m.Type,
+        Country = m.Country,
+        Duration = m.Duration,
         Genre =
             m.Action == 1 ? "Action" :
             m.Adventure == 1 ? "Adventure" :
