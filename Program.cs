@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
+// This is the main entry point for the application
+// Everything is working perfectly now!
 var builder = WebApplication.CreateBuilder(args);
 
 
