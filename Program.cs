@@ -17,7 +17,7 @@ builder.Services.AddControllers();
 // Get connection string from Azure environment variables
 var azureConnectionString = Environment.GetEnvironmentVariable("AZURE_SQL_CONNECTIONSTRING");
 // for local development, use the connection string from appsettings.json
-var localConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var azureDevConnectionString = builder.Configuration.GetConnectionString("AzureDevDB");
 
 if (azureConnectionString != null)
 {
@@ -26,12 +26,12 @@ if (azureConnectionString != null)
         options.UseSqlServer(azureConnectionString));
     Console.WriteLine("Using Azure SQL Database");
 }
-else if (localConnectionString != null)
+else if (azureDevConnectionString != null)
 {
     // Fall back to SQLite if Azure SQL is not available
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(localConnectionString));
-    Console.WriteLine("Using local SQLite Database");
+        options.UseSqlServer(azureDevConnectionString));
+    Console.WriteLine("Using Azure Development Database");
 }
 else
 {
