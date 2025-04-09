@@ -17,6 +17,7 @@ namespace IntexBackend.Controllers
         {
             _context = context;
         }
+        
 // GET: api/MovieTitle
 [HttpGet]
 public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
@@ -296,19 +297,35 @@ private string GetPrimaryGenre(MovieTitle m)
             return Ok(genres);
         }
 
-        // GET: api/MovieTitle/{id}
+// GET: api/MovieTitle/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<MovieTitle>> GetMovieTitle(string id)
+        public async Task<ActionResult<MovieTitleDto>> GetMovieTitle(string id)
         {
-            var movieTitle = await _context.MovieTitles.FindAsync(id);
+            var movie = await _context.MovieTitles.FindAsync(id);
 
-            if (movieTitle == null)
+            if (movie == null)
             {
                 return NotFound();
             }
 
-            return movieTitle;
+            var movieDto = new MovieTitleDto
+            {
+                ShowId = movie.ShowId,
+                Title = movie.Title,
+                Description = movie.Description,
+                ImageUrl = movie.ImageUrl,
+                ReleaseYear = movie.ReleaseYear,
+                Director = movie.Director,
+                Cast = movie.Cast,
+                Type = movie.Type,
+                Country = movie.Country,
+                Duration = movie.Duration,
+                Genre = GetPrimaryGenre(movie) // 👈 Add logic to get readable genre
+            };
+
+            return Ok(movieDto);
         }
+
 
         // POST: api/MovieTitle
         [HttpPost]
