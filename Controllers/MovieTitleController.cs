@@ -296,6 +296,46 @@ private string GetPrimaryGenre(MovieTitle m)
             return Ok(genres);
         }
 
+        // GET: api/MovieTitle/types
+        [HttpGet("types")]
+        public async Task<ActionResult<IEnumerable<string>>> GetTypes()
+        {
+            // Query the database to get all distinct types
+            var types = await _context.MovieTitles
+                .Where(m => !string.IsNullOrEmpty(m.Type))
+                .Select(m => m.Type)
+                .Distinct()
+                .ToListAsync();
+
+            // Filter out any null values (shouldn't happen due to the Where clause, but just to be safe)
+            types = types.Where(t => t != null).Cast<string>().ToList();
+            
+            // Sort the types alphabetically
+            types.Sort();
+            
+            return Ok(types);
+        }
+
+        // GET: api/MovieTitle/countries
+        [HttpGet("countries")]
+        public async Task<ActionResult<IEnumerable<string>>> GetCountries()
+        {
+            // Query the database to get all distinct countries
+            var countries = await _context.MovieTitles
+                .Where(m => !string.IsNullOrEmpty(m.Country))
+                .Select(m => m.Country)
+                .Distinct()
+                .ToListAsync();
+
+            // Filter out any null values (shouldn't happen due to the Where clause, but just to be safe)
+            countries = countries.Where(c => c != null).Cast<string>().ToList();
+            
+            // Sort the countries alphabetically
+            countries.Sort();
+            
+            return Ok(countries);
+        }
+
         // GET: api/MovieTitle/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<MovieTitle>> GetMovieTitle(string id)
