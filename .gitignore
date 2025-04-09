@@ -91,4 +91,5 @@ ehthumbs.db
 .vscode/
 
 # Global JetBrains Rider directory
-.idea/
+.idea/# Database files
+*.db
