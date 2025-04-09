@@ -90,15 +90,15 @@ namespace IntexBackend.Controllers
                     City = model.City,
                     State = model.State,
                     Zip = zip,
-                    // Set streaming service flags
-                    Netflix = model.Services?.Contains("Netflix") == true ? 1 : 0,
-                    AmazonPrime = model.Services?.Contains("Amazon Prime") == true ? 1 : 0,
-                    DisneyPlus = model.Services?.Contains("Disney+") == true ? 1 : 0,
-                    ParamountPlus = model.Services?.Contains("Paramount+") == true ? 1 : 0,
-                    Max = model.Services?.Contains("Max") == true ? 1 : 0,
-                    Hulu = model.Services?.Contains("Hulu") == true ? 1 : 0,
-                    AppleTVPlus = model.Services?.Contains("Apple TV+") == true ? 1 : 0,
-                    Peacock = model.Services?.Contains("Peacock") == true ? 1 : 0
+                // Set streaming service flags - convert any string values to integers
+                Netflix = ConvertServiceFlagToInt(model.Services, "Netflix"),
+                AmazonPrime = ConvertServiceFlagToInt(model.Services, "Amazon Prime"),
+                DisneyPlus = ConvertServiceFlagToInt(model.Services, "Disney+"),
+                ParamountPlus = ConvertServiceFlagToInt(model.Services, "Paramount+"),
+                Max = ConvertServiceFlagToInt(model.Services, "Max"),
+                Hulu = ConvertServiceFlagToInt(model.Services, "Hulu"),
+                AppleTVPlus = ConvertServiceFlagToInt(model.Services, "Apple TV+"),
+                Peacock = ConvertServiceFlagToInt(model.Services, "Peacock")
                 };
 
                 _context.MovieUsers.Add(movieUser);
@@ -193,6 +193,30 @@ namespace IntexBackend.Controllers
                 name = movieUser.Name,
                 email = movieUser.Email
             });
+        }
+
+        // Helper method to convert service flag to integer
+        private int ConvertServiceFlagToInt(List<string>? services, string serviceName)
+        {
+            if (services == null)
+                return 0;
+                
+            // Check if the service exists in the list (case-insensitive)
+            bool hasService = services.Any(s => string.Equals(s, serviceName, StringComparison.OrdinalIgnoreCase));
+            
+            // Handle both string and integer values
+            foreach (var service in services)
+            {
+                // If the service is already a "1" or "0" string with the service name
+                if (service == $"{serviceName}:1" || service == $"{serviceName}=1")
+                    return 1;
+                    
+                if (service == $"{serviceName}:0" || service == $"{serviceName}=0")
+                    return 0;
+            }
+            
+            // Default behavior: return 1 if service is in the list, 0 otherwise
+            return hasService ? 1 : 0;
         }
 
         private async Task<string> GenerateJwtToken(IdentityUser user)
