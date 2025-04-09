@@ -26,13 +26,13 @@ if (azureConnectionString != null)
         options.UseSqlServer(azureConnectionString));
     Console.WriteLine("Using Azure SQL Database");
 }
-else if (azureDevConnectionString != null)
-{
-    // Fall back to SQLite if Azure SQL is not available
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(azureDevConnectionString));
-    Console.WriteLine("Using Movies.db Database");
-}
+// else if (azureDevConnectionString != null)
+// {
+//     // Fall back to SQLite if Azure SQL is not available
+//     builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//         options.UseSqlite(azureDevConnectionString));
+//     Console.WriteLine("Using Movies.db Database");
+// }
 else
 {
     throw new InvalidOperationException("No database connection string is available");
