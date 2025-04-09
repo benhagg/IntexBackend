@@ -132,6 +132,7 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
         Type = m.Type,
         Country = m.Country,
         Duration = m.Duration,
+        Rating = m.Rating,
         // If a genre filter was applied, use that genre for display
         Genre = !string.IsNullOrEmpty(genre) ? 
             // Since we've already filtered the movies by the selected genre,
@@ -360,6 +361,7 @@ private string GetPrimaryGenre(MovieTitle m)
                 movieTitle.Type,
                 movieTitle.Country,
                 movieTitle.Duration,
+                movieTitle.Rating,
                 Genre = GetPrimaryGenre(movieTitle),
                 // Include all the genre fields for the frontend to use
                 movieTitle.Action,
