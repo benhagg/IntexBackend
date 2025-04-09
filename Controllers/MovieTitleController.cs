@@ -17,7 +17,6 @@ namespace IntexBackend.Controllers
         {
             _context = context;
         }
-        
 // GET: api/MovieTitle
 [HttpGet]
 public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
@@ -297,49 +296,59 @@ private string GetPrimaryGenre(MovieTitle m)
             return Ok(genres);
         }
 
-// GET: api/MovieTitle/{id}
-        [HttpGet("{id}")]
-        public async Task<ActionResult<MovieTitleDto>> GetMovieTitle(string id)
+        // GET: api/MovieTitle/types
+        [HttpGet("types")]
+        public async Task<ActionResult<IEnumerable<string>>> GetTypes()
         {
-            var movie = await _context.MovieTitles.FindAsync(id);
+            // Query the database to get all distinct types
+            var types = await _context.MovieTitles
+                .Where(m => !string.IsNullOrEmpty(m.Type))
+                .Select(m => m.Type)
+                .Distinct()
+                .ToListAsync();
 
-            if (movie == null)
+            // Filter out any null values (shouldn't happen due to the Where clause, but just to be safe)
+            types = types.Where(t => t != null).Cast<string>().ToList();
+            
+            // Sort the types alphabetically
+            types.Sort();
+            
+            return Ok(types);
+        }
+
+        // GET: api/MovieTitle/countries
+        [HttpGet("countries")]
+        public async Task<ActionResult<IEnumerable<string>>> GetCountries()
+        {
+            // Query the database to get all distinct countries
+            var countries = await _context.MovieTitles
+                .Where(m => !string.IsNullOrEmpty(m.Country))
+                .Select(m => m.Country)
+                .Distinct()
+                .ToListAsync();
+
+            // Filter out any null values (shouldn't happen due to the Where clause, but just to be safe)
+            countries = countries.Where(c => c != null).Cast<string>().ToList();
+            
+            // Sort the countries alphabetically
+            countries.Sort();
+            
+            return Ok(countries);
+        }
+
+        // GET: api/MovieTitle/{id}
+        [HttpGet("{id}")]
+        public async Task<ActionResult<MovieTitle>> GetMovieTitle(string id)
+        {
+            var movieTitle = await _context.MovieTitles.FindAsync(id);
+
+            if (movieTitle == null)
             {
                 return NotFound();
             }
 
-            // Fetch ratings from the database
-            var ratings = await _context.MovieRatings
-                .Where(r => r.ShowId == movie.ShowId)
-                .ToListAsync();
-
-            // Calculate average rating
-            double averageRating = 0;
-            if (ratings.Count > 0)
-            {
-                averageRating = ratings.Average(r => r.Rating);
-            }
-
-            var movieDto = new MovieTitleDto
-            {
-                ShowId = movie.ShowId,
-                Title = movie.Title,
-                Description = movie.Description,
-                ImageUrl = movie.ImageUrl,
-                ReleaseYear = movie.ReleaseYear,
-                Director = movie.Director,
-                Cast = movie.Cast,
-                Type = movie.Type,
-                Country = movie.Country,
-                Duration = movie.Duration,
-                Genre = GetPrimaryGenre(movie),
-                AverageRating = averageRating // 👈 NEW FIELD
-            };
-
-            return Ok(movieDto);
+            return movieTitle;
         }
-
-
 
         // POST: api/MovieTitle
         [HttpPost]
@@ -353,114 +362,37 @@ private string GetPrimaryGenre(MovieTitle m)
         }
 
         // PUT: api/MovieTitle/{id}
-[HttpPut("{id}")]
-[Authorize(Roles = "Admin")]
-public async Task<IActionResult> PutMovieTitle(string id, MovieTitleDto dto)
-{
-    if (id != dto.ShowId)
-    {
-        return BadRequest("Mismatched movie ID.");
-    }
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutMovieTitle(string id, MovieTitle movieTitle)
+        {
+            if (id != movieTitle.ShowId)
+            {
+                return BadRequest();
+            }
 
-    var movie = await _context.MovieTitles.FindAsync(id);
-    if (movie == null)
-    {
-        return NotFound("Movie not found.");
-    }
+            _context.Entry(movieTitle).State = EntityState.Modified;
 
-    // Update other properties
-    movie.Title = dto.Title;
-    movie.Type = dto.Type;
-    movie.ReleaseYear = dto.ReleaseYear;
-    movie.Director = dto.Director;
-    movie.Description = dto.Description;
-    movie.ImageUrl = dto.ImageUrl;
-    movie.Cast = dto.Cast;
-    movie.Duration = dto.Duration;
-    movie.Country = dto.Country;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!MovieTitleExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
 
-    // 🔄 Reset all genre boolean flags to 0
-    movie.Action = 0;
-    movie.Adventure = 0;
-    movie.AnimeSeriesInternationalTVShows = 0;
-    movie.BritishTVShowsDocuseriesInternationalTVShows = 0;
-    movie.Children = 0;
-    movie.Comedies = 0;
-    movie.ComediesDramasInternationalMovies = 0;
-    movie.ComediesRomanticMovies = 0;
-    movie.CrimeTVShowsDocuseries = 0;
-    movie.Documentaries = 0;
-    movie.DocumentariesInternationalMovies = 0;
-    movie.Docuseries = 0;
-    movie.Dramas = 0;
-    movie.DramasInternationalMovies = 0;
-    movie.DramasRomanticMovies = 0;
-    movie.FamilyMovies = 0;
-    movie.Fantasy = 0;
-    movie.HorrorMovies = 0;
-    movie.InternationalMoviesThrillers = 0;
-    movie.InternationalTVShowsRomanticTVShowsTVDramas = 0;
-    movie.KidsTV = 0;
-    movie.LanguageTVShows = 0;
-    movie.Musicals = 0;
-    movie.NatureTV = 0;
-    movie.RealityTV = 0;
-    movie.Spirituality = 0;
-    movie.TVAction = 0;
-    movie.TVComedies = 0;
-    movie.TVDramas = 0;
-    movie.TalkShowsTVComedies = 0;
-    movie.Thrillers = 0;
+            return NoContent();
+        }
 
-    // ✅ Map genre from string to boolean field
-    switch (dto.Genre?.Trim().ToLowerInvariant())
-    {
-        case "action": movie.Action = 1; break;
-        case "adventure": movie.Adventure = 1; break;
-        case "anime series international tv shows": movie.AnimeSeriesInternationalTVShows = 1; break;
-        case "british tv shows docuseries international tv shows": movie.BritishTVShowsDocuseriesInternationalTVShows = 1; break;
-        case "children": movie.Children = 1; break;
-        case "comedy": movie.Comedies = 1; break;
-        case "comedy dramas international movies": movie.ComediesDramasInternationalMovies = 1; break;
-        case "comedy romantic movies": movie.ComediesRomanticMovies = 1; break;
-        case "crime tv shows docuseries": movie.CrimeTVShowsDocuseries = 1; break;
-        case "documentaries": movie.Documentaries = 1; break;
-        case "documentaries international movies": movie.DocumentariesInternationalMovies = 1; break;
-        case "docuseries": movie.Docuseries = 1; break;
-        case "drama": movie.Dramas = 1; break;
-        case "drama international movies": movie.DramasInternationalMovies = 1; break;
-        case "drama romantic movies": movie.DramasRomanticMovies = 1; break;
-        case "family movies": movie.FamilyMovies = 1; break;
-        case "fantasy": movie.Fantasy = 1; break;
-        case "horror": case "horror movies": movie.HorrorMovies = 1; break;
-        case "international movies thrillers": movie.InternationalMoviesThrillers = 1; break;
-        case "international tv shows romantic tv shows tv dramas": movie.InternationalTVShowsRomanticTVShowsTVDramas = 1; break;
-        case "kids' tv": case "kids tv": movie.KidsTV = 1; break;
-        case "language tv shows": movie.LanguageTVShows = 1; break;
-        case "musicals": movie.Musicals = 1; break;
-        case "nature tv": movie.NatureTV = 1; break;
-        case "reality tv": movie.RealityTV = 1; break;
-        case "spirituality": movie.Spirituality = 1; break;
-        case "tv action": movie.TVAction = 1; break;
-        case "tv comedies": movie.TVComedies = 1; break;
-        case "tv dramas": movie.TVDramas = 1; break;
-        case "talk shows tv comedies": movie.TalkShowsTVComedies = 1; break;
-        case "thriller": case "thrillers": movie.Thrillers = 1; break;
-        default: return BadRequest($"Unrecognized genre: {dto.Genre}");
-    }
-
-    try
-    {
-        await _context.SaveChangesAsync();
-    }
-    catch (DbUpdateException ex)
-    {
-        return StatusCode(500, $"Database update failed: {ex.Message}");
-    }
-    return NoContent();
-}
-
-// DELETE: api/MovieTitle/{id}
+        // DELETE: api/MovieTitle/{id}
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteMovieTitle(string id)
