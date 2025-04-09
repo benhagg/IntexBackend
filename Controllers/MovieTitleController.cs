@@ -338,7 +338,7 @@ private string GetPrimaryGenre(MovieTitle m)
 
         // GET: api/MovieTitle/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<MovieTitle>> GetMovieTitle(string id)
+        public async Task<ActionResult<object>> GetMovieTitle(string id)
         {
             var movieTitle = await _context.MovieTitles.FindAsync(id);
 
@@ -347,7 +347,55 @@ private string GetPrimaryGenre(MovieTitle m)
                 return NotFound();
             }
 
-            return movieTitle;
+            // Create a new object that includes the genre
+            var result = new
+            {
+                movieTitle.ShowId,
+                movieTitle.Title,
+                movieTitle.Description,
+                movieTitle.ImageUrl,
+                movieTitle.ReleaseYear,
+                movieTitle.Director,
+                movieTitle.Cast,
+                movieTitle.Type,
+                movieTitle.Country,
+                movieTitle.Duration,
+                Genre = GetPrimaryGenre(movieTitle),
+                // Include all the genre fields for the frontend to use
+                movieTitle.Action,
+                movieTitle.Adventure,
+                movieTitle.AnimeSeriesInternationalTVShows,
+                movieTitle.BritishTVShowsDocuseriesInternationalTVShows,
+                movieTitle.Children,
+                movieTitle.Comedies,
+                movieTitle.ComediesDramasInternationalMovies,
+                movieTitle.ComediesRomanticMovies,
+                movieTitle.CrimeTVShowsDocuseries,
+                movieTitle.Documentaries,
+                movieTitle.DocumentariesInternationalMovies,
+                movieTitle.Docuseries,
+                movieTitle.Dramas,
+                movieTitle.DramasInternationalMovies,
+                movieTitle.DramasRomanticMovies,
+                movieTitle.FamilyMovies,
+                movieTitle.Fantasy,
+                movieTitle.HorrorMovies,
+                movieTitle.InternationalMoviesThrillers,
+                movieTitle.InternationalTVShowsRomanticTVShowsTVDramas,
+                movieTitle.KidsTV,
+                movieTitle.LanguageTVShows,
+                movieTitle.Musicals,
+                movieTitle.NatureTV,
+                movieTitle.RealityTV,
+                movieTitle.Spirituality,
+                movieTitle.TVAction,
+                movieTitle.TVComedies,
+                movieTitle.TVDramas,
+                movieTitle.TalkShowsTVComedies,
+                movieTitle.Thrillers
+            };
+
+            return result;
         }
 
         // POST: api/MovieTitle
