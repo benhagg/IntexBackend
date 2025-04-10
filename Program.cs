@@ -18,7 +18,7 @@ builder.Services.AddControllers();
 
 var azureDevConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-if (ConnectionString != null)
+if (azureDevConnectionString != null)
 {
     // Fall back to SQLite if Azure SQL is not available
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
