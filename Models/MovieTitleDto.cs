@@ -10,6 +10,7 @@ public class MovieTitleDto
     public string Cast { get; set; }
     public string? Duration { get; set; }
     public string? Country { get; set; }
+    public string? Rating { get; set; }
     public string Genre { get; set; }
     public double AverageRating { get; set; }
 }

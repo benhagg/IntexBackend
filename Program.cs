@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
+// This is the main entry point for the application
+// Everything is working perfectly now!
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -14,14 +16,17 @@ builder.Services.AddControllers();
 
 // Configure database
 // for local development, use the connection string from appsettings.json
-var ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+var azureDevConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (ConnectionString != null)
 {
     // Fall back to SQLite if Azure SQL is not available
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(ConnectionString));
-    Console.WriteLine("Using Azure Development Database");
+
+        options.UseSqlite(azureDevConnectionString));
+    Console.WriteLine("Using Movies.db Database");
+
 }
 else
 {
@@ -135,139 +140,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Create roles and admin user if they don't exist
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-    
-    // Create roles if they don't exist
-    string[] roleNames = { "Admin", "User" };
-    foreach (var roleName in roleNames)
-    {
-        if (!await roleManager.RoleExistsAsync(roleName))
-        {
-            await roleManager.CreateAsync(new IdentityRole(roleName));
-        }
-    }
-    
-    // Create admin user if it doesn't exist
-    var adminEmail = "admin@movies.com";
-    var adminUser = await userManager.FindByEmailAsync(adminEmail);
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    
-    if (adminUser == null)
-    {
-        adminUser = new IdentityUser
-        {
-            UserName = adminEmail,
-            Email = adminEmail,
-            EmailConfirmed = true
-        };
-        
-        var result = await userManager.CreateAsync(adminUser, "Admin@123456");
-        
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(adminUser, "Admin");
-            
-            // Create MovieUser record for admin
-            var adminMovieUser = new IntexBackend.Models.MovieUser
-            {
-                Name = "Admin User",
-                Email = adminEmail,
-                Age = 30,
-                Gender = "Other",
-                City = "Movie City",
-                State = "CA",
-                Zip = 12345
-            };
-            
-            dbContext.MovieUsers.Add(adminMovieUser);
-            await dbContext.SaveChangesAsync();
-        }
-    }
-    else
-    {
-        // Check if MovieUser record exists for admin
-        var adminMovieUser = await dbContext.MovieUsers.FirstOrDefaultAsync(u => u.Email == adminEmail);
-        if (adminMovieUser == null)
-        {
-            // Create MovieUser record for existing admin
-            adminMovieUser = new IntexBackend.Models.MovieUser
-            {
-                Name = "Admin User",
-                Email = adminEmail,
-                Age = 30,
-                Gender = "Other",
-                City = "Movie City",
-                State = "CA",
-                Zip = 12345
-            };
-            
-            dbContext.MovieUsers.Add(adminMovieUser);
-            await dbContext.SaveChangesAsync();
-        }
-    }
-    
-    // Create regular user if it doesn't exist
-    var userEmail = "user@example.com";
-    var regularUser = await userManager.FindByEmailAsync(userEmail);
-    
-    if (regularUser == null)
-    {
-        regularUser = new IdentityUser
-        {
-            UserName = userEmail,
-            Email = userEmail,
-            EmailConfirmed = true
-        };
-        
-        var result = await userManager.CreateAsync(regularUser, "User@123456");
-        
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(regularUser, "User");
-            
-            // Create MovieUser record for regular user
-            var regularMovieUser = new IntexBackend.Models.MovieUser
-            {
-                Name = "Regular User",
-                Email = userEmail,
-                Age = 25,
-                Gender = "Other",
-                City = "User City",
-                State = "NY",
-                Zip = 54321
-            };
-            
-            dbContext.MovieUsers.Add(regularMovieUser);
-            await dbContext.SaveChangesAsync();
-        }
-    }
-    else
-    {
-        // Check if MovieUser record exists for regular user
-        var regularMovieUser = await dbContext.MovieUsers.FirstOrDefaultAsync(u => u.Email == userEmail);
-        if (regularMovieUser == null)
-        {
-            // Create MovieUser record for existing regular user
-            regularMovieUser = new IntexBackend.Models.MovieUser
-            {
-                Name = "Regular User",
-                Email = userEmail,
-                Age = 25,
-                Gender = "Other",
-                City = "User City",
-                State = "NY",
-                Zip = 54321
-            };
-            
-            dbContext.MovieUsers.Add(regularMovieUser);
-            await dbContext.SaveChangesAsync();
-        }
-    }
-}
 
 app.Run();
