@@ -188,10 +188,15 @@ namespace IntexBackend.Controllers
                 return NotFound(new { message = "User profile not found" });
             }
 
+            // Check if user is under 16 for Kids Mode enforcement
+            bool enforceKidsMode = movieUser.Age < 16;
+
             return Ok(new
             {
                 name = movieUser.Name,
-                email = movieUser.Email
+                email = movieUser.Email,
+                age = movieUser.Age,
+                enforceKidsMode = enforceKidsMode
             });
         }
 

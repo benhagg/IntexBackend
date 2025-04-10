@@ -26,7 +26,7 @@ namespace IntexBackend.Controllers
 
         // GET: api/movies/user-recommendations/{userId}
         [HttpGet("user-recommendations/{userId}")]
-        public async Task<ActionResult<object>> GetUserRecommendations(string userId)
+        public async Task<ActionResult<object>> GetUserRecommendations(string userId, [FromQuery] bool kidsMode = false)
         {
             // For ASP.NET Identity users, we need to map the GUID userId to an integer
             // that can be used with our recommendation tables
@@ -50,16 +50,16 @@ namespace IntexBackend.Controllers
             // Create response object with three recommendation categories
             var response = new
             {
-                locationRecommendations = await GetLocationRecommendations(mappedUserId),
-                basicRecommendations = await GetBasicRecommendations(mappedUserId),
-                streamingRecommendations = await GetStreamingRecommendations(mappedUserId)
+                locationRecommendations = await GetLocationRecommendations(mappedUserId, kidsMode),
+                basicRecommendations = await GetBasicRecommendations(mappedUserId, kidsMode),
+                streamingRecommendations = await GetStreamingRecommendations(mappedUserId, kidsMode)
             };
 
             return Ok(response);
         }
 
         // Helper method to get location-based recommendations
-        private async Task<List<MovieTitleDto>> GetLocationRecommendations(int userId)
+        private async Task<List<MovieTitleDto>> GetLocationRecommendations(int userId, bool kidsMode = false)
         {
             var recommendedMovieIds = new List<string>();
 
@@ -129,11 +129,11 @@ namespace IntexBackend.Controllers
             recommendedMovieIds = recommendedMovieIds.Take(5).ToList();
 
             // Get the full movie details for each recommendation
-            return await GetMovieDetailsForIds(recommendedMovieIds);
+            return await GetMovieDetailsForIds(recommendedMovieIds, kidsMode);
         }
 
         // Helper method to get basic recommendations
-        private async Task<List<MovieTitleDto>> GetBasicRecommendations(int userId)
+        private async Task<List<MovieTitleDto>> GetBasicRecommendations(int userId, bool kidsMode = false)
         {
             var recommendedMovieIds = new List<string>();
 
@@ -203,11 +203,11 @@ namespace IntexBackend.Controllers
             recommendedMovieIds = recommendedMovieIds.Take(5).ToList();
 
             // Get the full movie details for each recommendation
-            return await GetMovieDetailsForIds(recommendedMovieIds);
+            return await GetMovieDetailsForIds(recommendedMovieIds, kidsMode);
         }
 
         // Helper method to get streaming recommendations
-        private async Task<List<MovieTitleDto>> GetStreamingRecommendations(int userId)
+        private async Task<List<MovieTitleDto>> GetStreamingRecommendations(int userId, bool kidsMode = false)
         {
             var recommendedMovieIds = new List<string>();
 
@@ -277,11 +277,11 @@ namespace IntexBackend.Controllers
             recommendedMovieIds = recommendedMovieIds.Take(5).ToList();
 
             // Get the full movie details for each recommendation
-            return await GetMovieDetailsForIds(recommendedMovieIds);
+            return await GetMovieDetailsForIds(recommendedMovieIds, kidsMode);
         }
 
         // Helper method to get movie details for a list of movie IDs
-        private async Task<List<MovieTitleDto>> GetMovieDetailsForIds(List<string> movieIds)
+        private async Task<List<MovieTitleDto>> GetMovieDetailsForIds(List<string> movieIds, bool kidsMode = false)
         {
             var movies = new List<MovieTitleDto>();
 
@@ -292,11 +292,24 @@ namespace IntexBackend.Controllers
                     await connection.OpenAsync();
                     using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = @"
-                            SELECT show_id, title, description, release_year, director, country, imageUrl
-                            FROM movies_titles 
-                            WHERE show_id = @movieId
-                        ";
+                        // If Kids Mode is enabled, filter out non-kid-friendly movies
+                        if (kidsMode)
+                        {
+                            command.CommandText = @"
+                                SELECT show_id, title, description, release_year, director, country, imageUrl, rating
+                                FROM movies_titles 
+                                WHERE show_id = @movieId
+                                AND (rating IS NULL OR rating NOT IN ('PG-13', 'TV-14', 'TV-MA', 'R', 'NR', 'TV-Y7-FV', 'UR'))
+                            ";
+                        }
+                        else
+                        {
+                            command.CommandText = @"
+                                SELECT show_id, title, description, release_year, director, country, imageUrl, rating
+                                FROM movies_titles 
+                                WHERE show_id = @movieId
+                            ";
+                        }
                         command.Parameters.AddWithValue("@movieId", movieId);
 
                         using (var reader = await command.ExecuteReaderAsync())
@@ -314,6 +327,7 @@ namespace IntexBackend.Controllers
                                         Director = !reader.IsDBNull(4) ? reader.GetString(4) : "Unknown Director",
                                         Country = !reader.IsDBNull(5) ? reader.GetString(5) : null,
                                         ImageUrl = !reader.IsDBNull(6) ? reader.GetString(6) : null,
+                                        Rating = !reader.IsDBNull(7) ? reader.GetString(7) : null,
                                         // Determine genre from the movie record
                                         Genre = await GetGenreFromMovieId(connection, movieId)
                                     };

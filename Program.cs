@@ -17,14 +17,14 @@ builder.Services.AddControllers();
 // Configure database
 // for local development, use the connection string from appsettings.json
 
-var azureDevConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-if (ConnectionString != null)
+if (connectionString != null)
 {
     // Fall back to SQLite if Azure SQL is not available
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
-        options.UseSqlite(azureDevConnectionString));
+        options.UseSqlite(connectionString));
     Console.WriteLine("Using Movies.db Database");
 
 }

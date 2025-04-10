@@ -23,13 +23,24 @@ public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetMovieTitles(
     [FromQuery] string? genre = null,
     [FromQuery] string? search = null,
     [FromQuery] int page = 1,
-    [FromQuery] int pageSize = 10)
+    [FromQuery] int pageSize = 10,
+    [FromQuery] bool kidsMode = false)
 {
     IQueryable<MovieTitle> query = _context.MovieTitles;
 
     if (!string.IsNullOrEmpty(search))
     {
         query = query.Where(m => m.Title.ToLower().Contains(search.ToLower()));
+    }
+
+    // Apply Kids Mode filtering if enabled
+    if (kidsMode)
+    {
+        // Define non-kid-friendly ratings (PG-13 and above)
+        var nonKidFriendlyRatings = new[] { "PG-13", "TV-14", "TV-MA", "R", "NR", "TV-Y7-FV", "UR" };
+        
+        // Filter out movies with non-kid-friendly ratings
+        query = query.Where(m => !nonKidFriendlyRatings.Contains(m.Rating));
     }
 
     // Genre filter mapping - Ensure exact property name matches
@@ -339,13 +350,26 @@ private string GetPrimaryGenre(MovieTitle m)
 
         // GET: api/MovieTitle/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<object>> GetMovieTitle(string id)
+        public async Task<ActionResult<object>> GetMovieTitle(string id, [FromQuery] bool kidsMode = false)
         {
             var movieTitle = await _context.MovieTitles.FindAsync(id);
 
             if (movieTitle == null)
             {
                 return NotFound();
+            }
+            
+            // If Kids Mode is enabled, check if the movie has a kid-friendly rating
+            if (kidsMode)
+            {
+                // Define non-kid-friendly ratings (PG-13 and above)
+                var nonKidFriendlyRatings = new[] { "PG-13", "TV-14", "TV-MA", "R", "NR", "TV-Y7-FV", "UR" };
+                
+                // If the movie has a non-kid-friendly rating, return NotFound
+                if (nonKidFriendlyRatings.Contains(movieTitle.Rating))
+                {
+                    return NotFound("This movie is not available in Kids Mode");
+                }
             }
 
             // Create a new object that includes the genre

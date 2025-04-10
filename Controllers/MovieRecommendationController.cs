@@ -26,7 +26,7 @@ namespace IntexBackend.Controllers
 
         // GET: api/movies/{movieId}/recommendations
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetRecommendations(string movieId)
+        public async Task<ActionResult<IEnumerable<MovieTitleDto>>> GetRecommendations(string movieId, [FromQuery] bool kidsMode = false)
         {
             // Validate the movie exists
             var movie = await _context.MovieTitles.FindAsync(movieId);
@@ -34,6 +34,9 @@ namespace IntexBackend.Controllers
             {
                 return NotFound($"Movie with ID {movieId} not found");
             }
+
+            // Define non-kid-friendly ratings (PG-13 and above)
+            var nonKidFriendlyRatings = new[] { "PG-13", "TV-14", "TV-MA", "R", "NR", "TV-Y7-FV", "UR" };
 
             // Create a list to store the recommended movie IDs
             List<string> recommendedMovieIds = new List<string>();
@@ -132,11 +135,24 @@ namespace IntexBackend.Controllers
                     await connection.OpenAsync();
                     using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = @"
-                            SELECT show_id, title, description, release_year, director, country, imageUrl
-                            FROM movies_titles 
-                            WHERE show_id = @recId
-                        ";
+                        // If Kids Mode is enabled, filter out non-kid-friendly movies
+                        if (kidsMode)
+                        {
+                            command.CommandText = @"
+                                SELECT show_id, title, description, release_year, director, country, imageUrl, rating
+                                FROM movies_titles 
+                                WHERE show_id = @recId
+                                AND (rating IS NULL OR rating NOT IN ('PG-13', 'TV-14', 'TV-MA', 'R', 'NR', 'TV-Y7-FV', 'UR'))
+                            ";
+                        }
+                        else
+                        {
+                            command.CommandText = @"
+                                SELECT show_id, title, description, release_year, director, country, imageUrl, rating
+                                FROM movies_titles 
+                                WHERE show_id = @recId
+                            ";
+                        }
                         command.Parameters.AddWithValue("@recId", recId);
 
                         using (var reader = await command.ExecuteReaderAsync())
@@ -154,6 +170,7 @@ namespace IntexBackend.Controllers
                                         Director = !reader.IsDBNull(4) ? reader.GetString(4) : "Unknown Director",
                                         Country = !reader.IsDBNull(5) ? reader.GetString(5) : null,
                                         ImageUrl = !reader.IsDBNull(6) ? reader.GetString(6) : null,
+                                        Rating = !reader.IsDBNull(7) ? reader.GetString(7) : null,
                                         // Determine genre from the movie record
                                         Genre = await GetGenreFromMovieId(connection, recId)
                                     };
