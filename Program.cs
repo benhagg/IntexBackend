@@ -10,19 +10,6 @@ using Microsoft.OpenApi.Models;
 // Everything is working perfectly now!
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Kestrel to use port 8080 for HTTP and 8443 for HTTPS in deployment by default
-var httpsPort = Environment.GetEnvironmentVariable("ASPNETCORE_HTTPS_PORT") ?? "8443";
-var httpPort = Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORT") ?? "8080";
-
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(int.Parse(httpPort)); // HTTP
-    options.ListenAnyIP(int.Parse(httpsPort), listenOptions =>
-    {
-        listenOptions.UseHttps(); // HTTPS
-    });
-});
-
 // Add services to the container.
 builder.Services.AddControllers();
 
