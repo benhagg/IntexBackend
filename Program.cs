@@ -10,6 +10,7 @@ using Microsoft.OpenApi.Models;
 // Everything is working perfectly now!
 var builder = WebApplication.CreateBuilder(args);
 
+
 // Add services to the container.
 builder.Services.AddControllers();
 
@@ -18,7 +19,7 @@ builder.Services.AddControllers();
 
 var azureDevConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-if (azureDevConnectionString != null)
+if (ConnectionString != null)
 {
     // Fall back to SQLite if Azure SQL is not available
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
