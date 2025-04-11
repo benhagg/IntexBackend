@@ -118,7 +118,21 @@ namespace IntexBackend.Controllers
                 return BadRequest(ModelState);
             }
 
-            return Ok(new { message = "User registered successfully" });
+            // Generate JWT token for the newly registered user
+            var token = await GenerateJwtToken(user);
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return Ok(new
+            {
+                message = "User registered successfully",
+                token,
+                user = new
+                {
+                    id = user.Id,
+                    email = user.Email,
+                    roles
+                }
+            });
         }
 
         [HttpPost("login")]
