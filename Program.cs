@@ -36,7 +36,7 @@ else
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => {
     // Password settings as per requirements
-    options.Password.RequiredLength = 15;
+    options.Password.RequiredLength = 10;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
