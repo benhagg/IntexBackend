@@ -118,7 +118,21 @@ namespace IntexBackend.Controllers
                 return BadRequest(ModelState);
             }
 
-            return Ok(new { message = "User registered successfully" });
+            // Generate JWT token for the newly registered user
+            var token = await GenerateJwtToken(user);
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return Ok(new
+            {
+                message = "User registered successfully",
+                token,
+                user = new
+                {
+                    id = user.Id,
+                    email = user.Email,
+                    roles
+                }
+            });
         }
 
         [HttpPost("login")]
@@ -191,12 +205,172 @@ namespace IntexBackend.Controllers
             // Check if user is under 16 for Kids Mode enforcement
             bool enforceKidsMode = movieUser.Age < 16;
 
+            // Convert streaming service flags to a list of service names
+            var services = new List<string>();
+            if (movieUser.Netflix == 1) services.Add("Netflix");
+            if (movieUser.AmazonPrime == 1) services.Add("AmazonPrime");
+            if (movieUser.DisneyPlus == 1) services.Add("DisneyPlus");
+            if (movieUser.Hulu == 1) services.Add("Hulu");
+            if (movieUser.Max == 1) services.Add("Max");
+            if (movieUser.AppleTVPlus == 1) services.Add("AppleTVPlus");
+            if (movieUser.ParamountPlus == 1) services.Add("ParamountPlus");
+            if (movieUser.Peacock == 1) services.Add("Peacock");
+
+            // Split the name into first and last name if available
+            string firstName = null;
+            string lastName = null;
+            if (!string.IsNullOrEmpty(movieUser.Name))
+            {
+                var nameParts = movieUser.Name.Split(' ', 2);
+                firstName = nameParts[0];
+                if (nameParts.Length > 1)
+                {
+                    lastName = nameParts[1];
+                }
+            }
+
             return Ok(new
             {
-                name = movieUser.Name,
                 email = movieUser.Email,
-                age = movieUser.Age,
+                firstName = firstName,
+                lastName = lastName,
+                phone = movieUser.Phone,
+                age = movieUser.Age.ToString(),
+                gender = movieUser.Gender,
+                city = movieUser.City,
+                state = movieUser.State,
+                zip = movieUser.Zip.ToString(),
+                services = services,
                 enforceKidsMode = enforceKidsMode
+            });
+        }
+
+        [HttpPut("update")]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserModel model)
+        {
+            // Get the user's email from the claims
+            var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            // Find the MovieUser by email
+            var movieUser = await _context.MovieUsers.FirstOrDefaultAsync(u => u.Email == email);
+            
+            if (movieUser == null)
+            {
+                return NotFound(new { message = "User profile not found" });
+            }
+
+            // Update the user's information
+            // Combine first and last name into the Name field
+            if (!string.IsNullOrEmpty(model.FirstName))
+            {
+                movieUser.Name = !string.IsNullOrEmpty(model.LastName) 
+                    ? $"{model.FirstName} {model.LastName}" 
+                    : model.FirstName;
+            }
+
+            // Update other fields if provided
+            if (!string.IsNullOrEmpty(model.Phone))
+            {
+                movieUser.Phone = model.Phone;
+            }
+
+            if (!string.IsNullOrEmpty(model.Age))
+            {
+                if (int.TryParse(model.Age, out int age))
+                {
+                    movieUser.Age = age;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(model.Gender))
+            {
+                movieUser.Gender = model.Gender;
+            }
+
+            if (!string.IsNullOrEmpty(model.City))
+            {
+                movieUser.City = model.City;
+            }
+
+            if (!string.IsNullOrEmpty(model.State))
+            {
+                movieUser.State = model.State;
+            }
+
+            if (!string.IsNullOrEmpty(model.Zip))
+            {
+                if (int.TryParse(model.Zip, out int zip))
+                {
+                    movieUser.Zip = zip;
+                }
+            }
+
+            // Update streaming services
+            if (model.Services != null)
+            {
+                movieUser.Netflix = model.Services.Contains("Netflix") ? 1 : 0;
+                movieUser.AmazonPrime = model.Services.Contains("AmazonPrime") ? 1 : 0;
+                movieUser.DisneyPlus = model.Services.Contains("DisneyPlus") ? 1 : 0;
+                movieUser.Hulu = model.Services.Contains("Hulu") ? 1 : 0;
+                movieUser.Max = model.Services.Contains("Max") ? 1 : 0;
+                movieUser.AppleTVPlus = model.Services.Contains("AppleTVPlus") ? 1 : 0;
+                movieUser.ParamountPlus = model.Services.Contains("ParamountPlus") ? 1 : 0;
+                movieUser.Peacock = model.Services.Contains("Peacock") ? 1 : 0;
+            }
+
+            // Save changes to the database
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = $"Failed to update user profile: {ex.Message}" });
+            }
+
+            // Return the updated user information
+            // Convert streaming service flags to a list of service names for the response
+            var services = new List<string>();
+            if (movieUser.Netflix == 1) services.Add("Netflix");
+            if (movieUser.AmazonPrime == 1) services.Add("AmazonPrime");
+            if (movieUser.DisneyPlus == 1) services.Add("DisneyPlus");
+            if (movieUser.Hulu == 1) services.Add("Hulu");
+            if (movieUser.Max == 1) services.Add("Max");
+            if (movieUser.AppleTVPlus == 1) services.Add("AppleTVPlus");
+            if (movieUser.ParamountPlus == 1) services.Add("ParamountPlus");
+            if (movieUser.Peacock == 1) services.Add("Peacock");
+
+            // Split the name into first and last name if available
+            string firstName = null;
+            string lastName = null;
+            if (!string.IsNullOrEmpty(movieUser.Name))
+            {
+                var nameParts = movieUser.Name.Split(' ', 2);
+                firstName = nameParts[0];
+                if (nameParts.Length > 1)
+                {
+                    lastName = nameParts[1];
+                }
+            }
+
+            return Ok(new
+            {
+                email = movieUser.Email,
+                firstName = firstName,
+                lastName = lastName,
+                phone = movieUser.Phone,
+                age = movieUser.Age.ToString(),
+                gender = movieUser.Gender,
+                city = movieUser.City,
+                state = movieUser.State,
+                zip = movieUser.Zip.ToString(),
+                services = services
             });
         }
 
@@ -293,5 +467,18 @@ namespace IntexBackend.Controllers
 
         [Required]
         public string Password { get; set; }
+    }
+
+    public class UpdateUserModel
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Phone { get; set; }
+        public string? Age { get; set; }
+        public string? Gender { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? Zip { get; set; }
+        public List<string>? Services { get; set; }
     }
 }
